@@ -7,4 +7,4 @@ bin/*
 *~
 config.mk
 cflie.*
-version.c
+//version.c

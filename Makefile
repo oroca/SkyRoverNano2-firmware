@@ -274,12 +274,13 @@ endif
 
 all: build
 build: clean_version compile print_version size
-compile: clean_version $(PROG).hex $(PROG).bin $(PROG).dfu
+#compile: clean_version $(PROG).hex $(PROG).bin $(PROG).dfu
+compile: $(PROG).hex $(PROG).bin
 
 clean_version:
 ifeq ($(SHELL),/bin/sh)
-	@echo "  CLEAN_VERSION"
-	@rm -f version.c
+#	@echo "  CLEAN_VERSION"
+#	@rm -f version.c
 endif
 
 print_version: compile
@@ -311,7 +312,7 @@ endif
 #Flash the stm.
 flash:
 	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -c "reset halt" \
-                 -c "flash write_image erase $(PROG).elf" -c "verify_image $(PROG).elf" -c "reset run" -c shutdown
+                 -c "flash write_image erase $(PROG).hex" -c "verify_image $(PROG).hex" -c "reset run" -c shutdown
 
 flash_dfu:
 	$(DFU_UTIL) -a 0 -D $(PROG).dfu
