@@ -55,6 +55,7 @@ typedef enum {LED_RED=0, LED_GREEN} led_t;
 
 #elif defined(PLATFORM_CF2)
 //Hardware configuration
+#if 0
 #define LED_GPIO_PERIF   (RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_GPIOD)
 #define LED_GPIO_PORT_BLUE  GPIOD
 #define LED_GPIO_BLUE_L  GPIO_Pin_2
@@ -68,6 +69,22 @@ typedef enum {LED_RED=0, LED_GREEN} led_t;
 #define LED_POL_GREEN_R  LED_POL_NEG
 #define LED_GPIO_RED_R   GPIO_Pin_3
 #define LED_POL_RED_R    LED_POL_NEG
+#else
+// For SkyRoverNano2
+#define LED_GPIO_PERIF   (RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_GPIOD)
+#define LED_GPIO_PORT_BLUE  GPIOD
+#define LED_GPIO_BLUE_L  GPIO_Pin_2
+#define LED_POL_BLUE_L   LED_POL_POS
+#define LED_GPIO_PORT    GPIOC
+#define LED_GPIO_GREEN_L GPIO_Pin_0
+#define LED_POL_GREEN_L  LED_POL_NEG
+#define LED_GPIO_RED_L   GPIO_Pin_1
+#define LED_POL_RED_L    LED_POL_NEG
+#define LED_GPIO_GREEN_R GPIO_Pin_3
+#define LED_POL_GREEN_R  LED_POL_NEG
+#define LED_GPIO_RED_R   GPIO_Pin_2
+#define LED_POL_RED_R    LED_POL_NEG
+#endif
 
 #define LINK_LED         LED_GREEN_L
 #define CHG_LED          LED_BLUE_L

@@ -64,6 +64,7 @@ void expbrdInit()
     // Can't have LED-ring and brushless breakout at the same time
     // as they share TIM3
     neopixelringInit();
+    DEBUG_PRINT("neopixelringInit ok\n");
 #endif
   }
 
@@ -109,6 +110,25 @@ static bool expbrdScan(void)
   {
     DEBUG_PRINT("Scan [FAILED].\n");
   }
+
+#if 0
+  expbrdData[0].header = EXPBRD_ID;
+  expbrdData[0].vid    = EXPBRD_VID_BITCRAZE;
+  expbrdData[0].pid    = EXPBRD_PID_LEDRING;
+  expbrdData[0].crc = crcSlow( (uint8_t *)&expbrdData[0], sizeof(ExpbrdData) - 1);
+
+  status = owWrite(0, EXPBRD_OW_ADDR, sizeof(ExpbrdData), (uint8_t *)&expbrdData[0]);
+
+  if( status == true )
+  {
+	  DEBUG_PRINT("owWrite LED Ring OK\n");
+  }
+  else
+  {
+	  DEBUG_PRINT("owWrite LED Ring Fail\n");
+  }
+#endif
+
 
   for (i = 0; i < nBoards; i++)
   {
