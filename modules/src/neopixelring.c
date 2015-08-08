@@ -595,6 +595,10 @@ static void neopixelringTimer(xTimerHandle timer)
   {
     workerSchedule(neopixelringWorker, NULL);
   }
+  else
+  {
+	  ws2812Send(black, NBR_LEDS);
+  }
 #else
   workerSchedule(neopixelringWorker, NULL);
 #endif
