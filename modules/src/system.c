@@ -143,6 +143,9 @@ void systemTask(void *arg)
 #endif
 #endif //ndef USE_RADIOLINK_CRTP
 
+  // For SkyRoverNano2
+  ledSet(LED_RED_L,1);
+
   commInit();
 
   DEBUG_PRINT("----------------------------\n");

@@ -228,6 +228,9 @@ static void stabilizerTask(void* param)
   //Wait for the system to be fully started to start stabilization loop
   systemWaitStart();
 
+  // For SkyRoverNano2
+  ledseqRun(SYS_LED, seq_testPassed);
+
   lastWakeTime = xTaskGetTickCount ();
 
   while(1)

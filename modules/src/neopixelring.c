@@ -59,7 +59,9 @@
 
 /**************** Some useful macros ***************/
 
-#define NBR_LEDS  12
+// For SkyRoverNano2
+//#define NBR_LEDS  12
+#define NBR_LEDS  9
 #define RED {0x10, 0x00, 0x00}
 #define GREEN {0x00, 0x10, 0x00}
 #define BLUE {0x00, 0x00, 0x10}
@@ -583,9 +585,19 @@ void neopixelringWorker(void * data)
   ws2812Send(buffer, NBR_LEDS);
 }
 
+extern bool imu6IsCalibrated(void);
+
 static void neopixelringTimer(xTimerHandle timer)
 {
+#if 1
+  // for SkyRoverNano2
+  if( imu6IsCalibrated() )
+  {
+    workerSchedule(neopixelringWorker, NULL);
+  }
+#else
   workerSchedule(neopixelringWorker, NULL);
+#endif
 
   setHeadlightsOn(headlightEnable);
 }

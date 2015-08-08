@@ -326,7 +326,10 @@ void imu6Read(Axis3f* gyroOut, Axis3f* accOut)
     imuFindBiasValue(&gyroBias);
     if (gyroBias.isBiasValueFound)
     {
-      ledseqRun(SYS_LED, seq_calibrated);
+      // For SkyRoverNano2
+      //ledseqRun(SYS_LED, seq_calibrated);
+    	ledseqStop(SYS_LED, seq_alive);
+    	ledseqRun(LED_GREEN_R, seq_calibrated);
     }
   }
 
