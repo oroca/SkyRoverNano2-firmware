@@ -57,6 +57,7 @@
 #include "expbrd.h"
 #include "mem.h"
 #include "proximity.h"
+#include "sonar.h"
 
 /* Private variable */
 static bool selftestPassed;
@@ -96,7 +97,7 @@ void systemInit(void)
 #ifdef PROXIMITY_ENABLED
   proximityInit();
 #endif
-    
+
   isInit = true;
 }
 
@@ -163,6 +164,10 @@ void systemTask(void *arg)
 #endif
   memInit();
   
+#ifdef ACTIVATE_SONAR_SENSOR
+  sonarInit();
+#endif
+
   //Test the modules
   pass &= systemTest();
   pass &= configblockTest();

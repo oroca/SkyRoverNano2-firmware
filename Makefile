@@ -124,6 +124,8 @@ PROJ_OBJ += exti.o nvic.o motors.o
 PROJ_OBJ_CF1 += led_f103.o i2cdev_f103.o i2croutines.o adc_f103.o mpu6050.o hmc5883l.o ms5611.o nrf24l01.o eeprom.o
 PROJ_OBJ_CF2 += led_f405.o mpu6500.o i2cdev_f405.o ws2812.o lps25h.o ak8963.o eeprom.o maxsonar.o
 PROJ_OBJ_CF2 += uart_syslink.o swd.o uart1.o uart2.o
+PROJ_OBJ_CF2 += sonar.o 
+
 # USB Files
 PROJ_OBJ_CF2 += usb_bsp.o usblink.o usbd_desc.o usb.o
 
@@ -137,6 +139,7 @@ PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o
 PROJ_OBJ += commander.o controller.o sensfusion6.o stabilizer.o
 PROJ_OBJ += log.o worker.o trigger.o sitaw.o
 PROJ_OBJ_CF2 += neopixelring.o expbrd.o platformservice.o 
+
 
 # Expansion boards
 PROJ_OBJ_CF2 += exptest.o

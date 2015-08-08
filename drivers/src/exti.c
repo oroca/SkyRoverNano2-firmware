@@ -29,6 +29,9 @@
 
 #include "nvicconf.h"
 #include "nrf24l01.h"
+#include "config.h"
+#include "sonar.h"
+
 
 #ifdef PLATFORM_CF1
   #define RADIO_GPIO_IRQ_LINE   EXTI_Line9
@@ -79,5 +82,9 @@ void __attribute__((used)) EXTI15_10_IRQHandler(void)
   {
     EXTI_ClearITPendingBit(RADIO_GPIO_IRQ_LINE);
   }
+
+#if defined(ACTIVATE_SONAR_SENSOR)
+  sonarExtiInterruptHandler();
+#endif
 }
 #endif
