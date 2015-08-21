@@ -88,6 +88,18 @@ void systemInit(void)
   canStartMutex = xSemaphoreCreateMutex();
   xSemaphoreTake(canStartMutex, portMAX_DELAY);
 
+  /* Initialized hear and early so that DEBUG_PRINT (buffered) can be used early */
+  crtpInit();
+  consoleInit();
+
+  DEBUG_PRINT("----------------------------\n");
+  DEBUG_PRINT(P_NAME " is up and running!\n");
+  DEBUG_PRINT("Build %s:%s (%s) %s\n", V_SLOCAL_REVISION,
+              V_SREVISION, V_STAG, (V_MODIFIED)?"MODIFIED":"CLEAN");
+  DEBUG_PRINT("I am 0x%X%X%X and I have %dKB of flash!\n",
+              *((int*)(MCU_ID_ADDRESS+8)), *((int*)(MCU_ID_ADDRESS+4)),
+              *((int*)(MCU_ID_ADDRESS+0)), *((short*)(MCU_FLASH_SIZE_ADDRESS)));
+
   configblockInit();
   workerInit();
   adcInit();
@@ -148,15 +160,6 @@ void systemTask(void *arg)
   ledSet(LED_RED_L,1);
 
   commInit();
-
-  DEBUG_PRINT("----------------------------\n");
-  DEBUG_PRINT("Crazyflie is up and running!\n");
-  DEBUG_PRINT("Build %s:%s (%s) %s\n", V_SLOCAL_REVISION,
-              V_SREVISION, V_STAG, (V_MODIFIED)?"MODIFIED":"CLEAN");
-  DEBUG_PRINT("I am 0x%X%X%X and I have %dKB of flash!\n",
-              *((int*)(MCU_ID_ADDRESS+8)), *((int*)(MCU_ID_ADDRESS+4)),
-              *((int*)(MCU_ID_ADDRESS+0)), *((short*)(MCU_FLASH_SIZE_ADDRESS)));
-
   commanderInit();
   stabilizerInit();
 #ifdef PLATFORM_CF2

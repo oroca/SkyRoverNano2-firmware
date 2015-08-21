@@ -35,6 +35,7 @@
 #include "crc.h"
 #include "exptest.h"
 #include "neopixelring.h"
+#include "bigquad.h"
 #include "imu.h"
 #include "config.h"
 
@@ -66,6 +67,11 @@ void expbrdInit()
     neopixelringInit();
     DEBUG_PRINT("neopixelringInit ok\n");
 #endif
+  }
+
+  if (expbrdIsPresent(EXPBRD_VID_BITCRAZE, EXPBRD_PID_BIGQUAD))
+  {
+    bigquadInit();
   }
 
   isInit = true;
