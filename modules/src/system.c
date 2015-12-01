@@ -1,6 +1,6 @@
 /*
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -51,13 +51,19 @@
 #include "comm.h"
 #include "stabilizer.h"
 #include "commander.h"
-#include "neopixelring.h"
 #include "console.h"
 #include "usb.h"
-#include "expbrd.h"
 #include "mem.h"
 #include "proximity.h"
 #include "sonar.h"
+#include "watchdog.h"
+#include "queuemonitor.h"
+#include "buzzer.h"
+#include "sound.h"
+
+#ifdef PLATFORM_CF2
+#include "deck.h"
+#endif
 
 /* Private variable */
 static bool selftestPassed;
@@ -73,7 +79,7 @@ static void systemTask(void *arg);
 /* Public functions */
 void systemLaunch(void)
 {
-  xTaskCreate(systemTask, (const signed char * const)SYSTEM_TASK_NAME,
+  xTaskCreate(systemTask, SYSTEM_TASK_NAME,
               SYSTEM_TASK_STACKSIZE, NULL,
               SYSTEM_TASK_PRI, NULL);
 
@@ -105,6 +111,7 @@ void systemInit(void)
   adcInit();
   ledseqInit();
   pmInit();
+  buzzerInit();
 
 #ifdef PROXIMITY_ENABLED
   proximityInit();
@@ -116,14 +123,14 @@ void systemInit(void)
 bool systemTest()
 {
   bool pass=isInit;
-  
+
 #ifdef PLATFORM_CF1
   pass &= adcTest();
 #endif
   pass &= ledseqTest();
   pass &= pmTest();
   pass &= workerTest();
-  
+  pass &= buzzerTest();
   return pass;
 }
 
@@ -132,9 +139,13 @@ bool systemTest()
 void systemTask(void *arg)
 {
   bool pass = true;
-  
+
   ledInit();
   ledSet(CHG_LED, 1);
+
+#ifdef DEBUG_QUEUE_MONITOR
+  queueMonitorInit();
+#endif
 
   uartInit();
 #ifdef ENABLE_UART1
@@ -163,12 +174,17 @@ void systemTask(void *arg)
   commanderInit();
   stabilizerInit();
 #ifdef PLATFORM_CF2
-  expbrdInit();
+  deckInit();
 #endif
+  soundInit();
   memInit();
   
 #ifdef ACTIVATE_SONAR_SENSOR
   sonarInit();
+#endif
+
+#ifdef PROXIMITY_ENABLED
+  proximityInit();
 #endif
 
   //Test the modules
@@ -178,15 +194,18 @@ void systemTask(void *arg)
   pass &= commanderTest();
   pass &= stabilizerTest();
 #ifdef PLATFORM_CF2
-  pass &= expbrdTest();
-#endif
+  pass &= deckTest();
+  #endif
+  pass &= soundTest();
   pass &= memTest();
-  
+  pass &= watchdogNormalStartTest();
+
   //Start the firmware
   if(pass)
   {
     selftestPassed = 1;
     systemStart();
+    soundSetEffect(SND_STARTUP);
     ledseqRun(SYS_LED, seq_alive);
     ledseqRun(LINK_LED, seq_testPassed);
   }
@@ -215,9 +234,9 @@ void systemTask(void *arg)
     }
   }
   DEBUG_PRINT("Free heap: %d bytes\n", xPortGetFreeHeapSize());
-  
+
   workerLoop();
-  
+
   //Should never reach this point!
   while(1)
     vTaskDelay(portMAX_DELAY);
@@ -228,6 +247,9 @@ void systemTask(void *arg)
 void systemStart()
 {
   xSemaphoreGive(canStartMutex);
+#ifndef DEBUG
+  watchdogInit();
+#endif
 }
 
 void systemWaitStart(void)
@@ -253,14 +275,16 @@ bool systemCanFly(void)
 
 void vApplicationIdleHook( void )
 {
-  extern size_t debugPrintTCBInfo(void);
-  static uint32_t timeToPrint = M2T(5000);
+  static uint32_t tickOfLatestWatchdogReset = M2T(0);
 
-  if (xTaskGetTickCount() - timeToPrint > M2T(10000))
+  portTickType tickCount = xTaskGetTickCount();
+
+  if (tickCount - tickOfLatestWatchdogReset > M2T(WATCHDOG_RESET_PERIOD_MS))
   {
-    timeToPrint = xTaskGetTickCount();
-    debugPrintTCBInfo();
+    tickOfLatestWatchdogReset = tickCount;
+    watchdogReset();
   }
+
   // Enter sleep mode. Does not work when debugging chip with SWD.
   // Currently saves about 20mA STM32F405 current consumption (~30%).
 #ifndef DEBUG

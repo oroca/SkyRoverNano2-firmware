@@ -29,7 +29,7 @@
 #include "config.h"
 #include "param.h"
 
-const char * V_SLOCAL_REVISION="V150821R1";
+const char * V_SLOCAL_REVISION="V151201R1";
 const char * V_SREVISION="{revision}";
 const char * V_STAG="SkyRoverNano2";
 const char * V_BRANCH="{branch}";

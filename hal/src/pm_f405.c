@@ -40,6 +40,7 @@
 #include "adc.h"
 #include "ledseq.h"
 #include "commander.h"
+#include "sound.h"
 
 typedef struct _PmSyslinkInfo
 {
@@ -98,7 +99,7 @@ void pmInit(void)
   if(isInit)
     return;
   
-  xTaskCreate(pmTask, (const signed char * const)PM_TASK_NAME,
+  xTaskCreate(pmTask, PM_TASK_NAME,
               PM_TASK_STACKSIZE, NULL, PM_TASK_PRI, NULL);
   
   isInit = true;
@@ -286,21 +287,25 @@ void pmTask(void *param)
         case charged:
           ledseqStop(CHG_LED, seq_charging);
           ledseqRun(CHG_LED, seq_charged);
+          soundSetEffect(SND_BAT_FULL);
           systemSetCanFly(false);
           break;
         case charging:
           ledseqStop(LOWBAT_LED, seq_lowbat);
           ledseqStop(CHG_LED, seq_charged);
           ledseqRun(CHG_LED, seq_charging);
+          soundSetEffect(SND_USB_CONN);
           systemSetCanFly(false);
           break;
         case lowPower:
           ledseqRun(LOWBAT_LED, seq_lowbat);
+          soundSetEffect(SND_BAT_LOW);
           systemSetCanFly(true);
           break;
         case battery:
           ledseqStop(CHG_LED, seq_charging);
           ledseqRun(CHG_LED, seq_charged);
+          soundSetEffect(SND_USB_DISC);
           systemSetCanFly(true);
           break;
         default:
