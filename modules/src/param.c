@@ -83,7 +83,7 @@ void paramInit(void)
 
   params = &_param_start;
   paramsLen = &_param_stop - &_param_start;
-  paramsCrc = crcSlow(params, paramsLen);
+  paramsCrc = crcSlow(params, paramsLen*sizeof(params[0]));
 
   for (i=0; i<paramsLen; i++)
   {
@@ -93,7 +93,7 @@ void paramInit(void)
 
 
   //Start the param task
-	xTaskCreate(paramTask, (const signed char * const)PARAM_TASK_NAME,
+	xTaskCreate(paramTask, PARAM_TASK_NAME,
 	            PARAM_TASK_STACKSIZE, NULL, PARAM_TASK_PRI, NULL);
 
   //TODO: Handle stored parameters!

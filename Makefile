@@ -3,8 +3,11 @@
 # This Makefile compiles all the objet file to ./bin/ and the resulting firmware
 # image in ./cfX.elf and ./cfX.bin
 
-#Put your personal build config in config.mk and DO NOT COMMIT IT!
--include config.mk
+# Put your personal build config in tools/make/config.mk and DO NOT COMMIT IT!
+# Make a copy of tools/make/config.mk.example to get you started
+-include tools/make/config.mk
+
+CFLAGS += $(EXTRA_CFLAGS)
 
 ######### JTAG and environment configuration ##########
 OPENOCD           ?= openocd
@@ -26,9 +29,6 @@ OPENOCD_TARGET    ?= target/stm32f4x_stlink.cfg
 USE_FPU           ?= 1
 endif
 
-## Flag that can be added to config.mk
-# CFLAGS += -DUSE_ESKYLINK         # Set CRTP link to E-SKY receiver
-# CFLAGS += -DDEBUG_PRINT_ON_UART  # Redirect the console output to the UART
 
 ifeq ($(PLATFORM), CF1)
 REV               ?= F
@@ -52,12 +52,12 @@ PORT = $(FREERTOS)/portable/GCC/ARM_CM3
 endif
 
 ifeq ($(PLATFORM), CF1)
-LINKER_DIR = scripts/F103/linker
-ST_OBJ_DIR  = scripts/F103
+LINKER_DIR = tools/make/F103/linker
+ST_OBJ_DIR  = tools/make/F103
 endif
 ifeq ($(PLATFORM), CF2)
-LINKER_DIR = scripts/F405/linker
-ST_OBJ_DIR  = scripts/F405
+LINKER_DIR = tools/make/F405/linker
+ST_OBJ_DIR  = tools/make/F405
 endif
 
 STLIB = lib
@@ -75,7 +75,7 @@ VPATH_CF2 += $(STLIB)/STM32_CPAL_Driver/src
 VPATH_CF2 += $(STLIB)/STM32_USB_Device_Library/Core/src
 VPATH_CF2 += $(STLIB)/STM32_USB_OTG_Driver/src
 VPATH_CF2 += $(STLIB)/STM32_CPAL_Driver/devices/stm32f4xx
-VPATH_CF2 += deck/api
+VPATH_CF2 += deck/api deck/core deck/drivers/src
 CRT0_CF2 = startup_stm32f40xx.o system_stm32f4xx.o
 
 # Should maybe be in separate file?
@@ -115,38 +115,49 @@ endif
 ############### Source files configuration ################
 
 # Init
-PROJ_OBJ = main.o
-PROJ_OBJ_CF1 = platform_cf1.o
-PROJ_OBJ_CF2 = platform_cf2.o
+PROJ_OBJ += main.o
+PROJ_OBJ_CF1 += platform_cf1.o
+PROJ_OBJ_CF2 += platform_cf2.o
 
 # Drivers
 PROJ_OBJ += exti.o nvic.o motors.o
-PROJ_OBJ_CF1 += led_f103.o i2cdev_f103.o i2croutines.o adc_f103.o mpu6050.o hmc5883l.o ms5611.o nrf24l01.o eeprom.o
-PROJ_OBJ_CF2 += led_f405.o mpu6500.o i2cdev_f405.o ws2812.o lps25h.o ak8963.o eeprom.o maxsonar.o
-PROJ_OBJ_CF2 += uart_syslink.o swd.o uart1.o uart2.o
+PROJ_OBJ_CF1 += led_f103.o i2cdev_f103.o i2croutines.o adc_f103.o mpu6050.o
+PROJ_OBJ_CF1 += hmc5883l.o ms5611.o nrf24l01.o eeprom.o watchdog.o
+PROJ_OBJ_CF2 += led_f405.o mpu6500.o i2cdev_f405.o ws2812_cf2.o lps25h.o
+PROJ_OBJ_CF2 += ak8963.o eeprom.o maxsonar.o piezo.o
+PROJ_OBJ_CF2 += uart_syslink.o swd.o uart1.o uart2.o watchdog.o
 # USB Files
 PROJ_OBJ_CF2 += usb_bsp.o usblink.o usbd_desc.o usb.o
 
 # Hal
-PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o
+PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o buzzer.o
 PROJ_OBJ_CF1 += imu_cf1.o pm_f103.o nrf24link.o ow_none.o uart.o
 PROJ_OBJ_CF2 += imu_cf2.o pm_f405.o syslink.o radiolink.o ow_syslink.o proximity.o
 
 # Modules
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o
 PROJ_OBJ += commander.o controller.o sensfusion6.o stabilizer.o
-PROJ_OBJ += log.o worker.o trigger.o sitaw.o
-PROJ_OBJ_CF2 += neopixelring.o expbrd.o platformservice.o bigquad.o
+PROJ_OBJ += log.o worker.o trigger.o sitaw.o queuemonitor.o
+PROJ_OBJ_CF1 += sound_cf1.o
+PROJ_OBJ_CF2 += platformservice.o sound_cf2.o
 
-# Expansion boards
-PROJ_OBJ_CF2 += exptest.o
+# Deck Core
+PROJ_OBJ_CF2 += deck.o deck_info.o deck_drivers.o
+
+# Deck API
 PROJ_OBJ_CF2 += deck_constants.o
 PROJ_OBJ_CF2 += deck_digital.o
 PROJ_OBJ_CF2 += deck_analog.o
+PROJ_OBJ_CF2 += buzzdeck.o
+
+# Decks
+PROJ_OBJ_CF2 += bigquad.o
+PROJ_OBJ_CF2 += exptest.o
+PROJ_OBJ_CF2 += ledring12.o
 
 # Utilities
 PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o fp16.o debug.o
-PROJ_OBJ += version.o
+PROJ_OBJ += version.o FreeRTOS-openocd.o
 PROJ_OBJ_CF1 += configblockflash.o
 PROJ_OBJ_CF2 += configblockeeprom.o
 
@@ -185,7 +196,7 @@ INCLUDES_CF2 += -I$(STLIB)/STM32_CPAL_Driver/inc
 INCLUDES_CF2 += -I$(STLIB)/STM32_CPAL_Driver/devices/stm32f4xx
 INCLUDES_CF2 += -I$(STLIB)/STM32_USB_Device_Library/Core/inc
 INCLUDES_CF2 += -I$(STLIB)/STM32_USB_OTG_Driver/inc
-INCLUDES_CF2 += -Ideck/interface
+INCLUDES_CF2 += -Ideck/interface -I deck/drivers/interface
 
 ifeq ($(USE_FPU), 1)
 	PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
@@ -234,7 +245,7 @@ CFLAGS += -MD -MP -MF $(BIN)/dep/$(@).d -MQ $(@)
 CFLAGS += -ffunction-sections -fdata-sections
 
 ASFLAGS = $(PROCESSOR) $(INCLUDES)
-LDFLAGS = --specs=nano.specs $(PROCESSOR) -Wl,-Map=$(PROG).map,--cref,--gc-sections
+LDFLAGS = --specs=nano.specs $(PROCESSOR) -Wl,-Map=$(PROG).map,--cref,--gc-sections,--undefined=uxTopUsedPriority
 
 #Flags required by the ST library
 ifeq ($(CLOAD), 1)
@@ -283,15 +294,13 @@ ifeq ($(SHELL),/bin/sh)
 endif
 
 print_version: compile
-ifeq ($(SHELL),/bin/sh)
-	@./scripts/print_revision.sh
-endif
 ifeq ($(PLATFORM), CF1)
 	@echo "Crazyflie Nano (1.0) build!"
 endif
 ifeq ($(PLATFORM), CF2)
 	@echo "Crazyflie 2.0 build!"
 endif
+	@$(PYTHON2) tools/make/versionTemplate.py --print-version
 ifeq ($(CLOAD), 1)
 	@echo "Crazyloader build!"
 endif
@@ -324,13 +333,16 @@ reset:
 	$(OPENOCD) -d0 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -c "reset" -c shutdown
 
 openocd:
-	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets
+	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -c "\$$_TARGETNAME configure -rtos auto"
+
+trace:
+	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -f tools/trace/enable_trace.cfg
 
 #Print preprocessor #defines
 prep:
 	@$(CC) -dD
 
-include scripts/targets.mk
+include tools/make/targets.mk
 
 #include dependencies
 -include $(DEPS)

@@ -38,6 +38,7 @@
 #include "crtp.h"
 #include "info.h"
 #include "cfassert.h"
+#include "queuemonitor.h"
 
 static bool isInit;
 
@@ -51,7 +52,6 @@ static struct crtpLinkOperations nopLink = {
 static struct crtpLinkOperations *link = &nopLink;
 
 static xQueueHandle  txQueue;
-static xQueueHandle  rxQueue;
 
 #define CRTP_NBR_OF_PORTS 16
 #define CRTP_TX_QUEUE_SIZE 60
@@ -69,11 +69,11 @@ void crtpInit(void)
     return;
 
   txQueue = xQueueCreate(CRTP_TX_QUEUE_SIZE, sizeof(CRTPPacket));
-  rxQueue = xQueueCreate(CRTP_RX_QUEUE_SIZE, sizeof(CRTPPacket));
+  DEBUG_QUEUE_MONITOR_REGISTER(txQueue);
 
-  xTaskCreate(crtpTxTask, (const signed char * const)CRTP_TX_TASK_NAME,
+  xTaskCreate(crtpTxTask, CRTP_TX_TASK_NAME,
               CRTP_TX_TASK_STACKSIZE, NULL, CRTP_TX_TASK_PRI, NULL);
-  xTaskCreate(crtpRxTask, (const signed char * const)CRTP_RX_TASK_NAME,
+  xTaskCreate(crtpRxTask, CRTP_RX_TASK_NAME,
               CRTP_RX_TASK_STACKSIZE, NULL, CRTP_RX_TASK_PRI, NULL);
 
   /* Start Rx/Tx tasks */
@@ -92,6 +92,7 @@ void crtpInitTaskQueue(CRTPPort portId)
   ASSERT(queues[portId] == NULL);
   
   queues[portId] = xQueueCreate(1, sizeof(CRTPPacket));
+  DEBUG_QUEUE_MONITOR_REGISTER(queues[portId]);
 }
 
 int crtpReceivePacket(CRTPPort portId, CRTPPacket *p)
@@ -208,14 +209,6 @@ bool crtpIsConnected(void)
   if (link->isConnected)
     return link->isConnected();
   return true;
-}
-
-void crtpPacketReveived(CRTPPacket *p)
-{
-  portBASE_TYPE xHigherPriorityTaskWoken;
-
-  xHigherPriorityTaskWoken = pdFALSE;
-  xQueueSendFromISR(rxQueue, p, &xHigherPriorityTaskWoken);
 }
 
 void crtpSetLink(struct crtpLinkOperations * lk)

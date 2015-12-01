@@ -54,6 +54,8 @@
 #ifndef FREERTOS_CONFIG_H
 #define FREERTOS_CONFIG_H
 
+#include <stdint.h>
+
 #include "config.h"
 #include "cfassert.h"
 /*-----------------------------------------------------------
@@ -76,7 +78,6 @@
 #define configMINIMAL_STACK_SIZE	( ( unsigned short ) FREERTOS_MIN_STACK_SIZE )
 #define configTOTAL_HEAP_SIZE		( ( size_t ) ( FREERTOS_HEAP_SIZE ) )
 #define configMAX_TASK_NAME_LEN		( 10 )
-#define configUSE_TRACE_FACILITY	0
 #define configUSE_16_BIT_TICKS		0
 #define configIDLE_SHOULD_YIELD		0
 #define configUSE_CO_ROUTINES 		0
@@ -87,7 +88,7 @@
 #define configUSE_MALLOC_FAILED_HOOK 1
 #define configTIMER_TASK_STACK_DEPTH configMINIMAL_STACK_SIZE
 
-#define configMAX_PRIORITIES		( ( unsigned portBASE_TYPE ) 5 )
+#define configMAX_PRIORITIES		( 6 )
 #define configMAX_CO_ROUTINE_PRIORITIES ( 2 )
 
 /* Set the following definitions to 1 to include the API function, or zero
@@ -129,6 +130,7 @@ to exclude the API function. */
 #define TASK_PROXIMITY_ID_NBR   6
 
 #define configASSERT( x )  if( ( x ) == 0 ) assertFail(#x, __FILE__, __LINE__ )
+
 /*
 #define traceTASK_SWITCHED_IN() \
   { \
@@ -136,4 +138,15 @@ to exclude the API function. */
     debugSendTraceInfo((int)pxCurrentTCB->pxTaskTag); \
   }
 */
+
+// Queue monitoring
+#ifdef DEBUG_QUEUE_MONITOR
+    #undef traceQUEUE_SEND
+    #undef traceQUEUE_SEND_FAILED
+    #define traceQUEUE_SEND(xQueue) qm_traceQUEUE_SEND(xQueue)
+    void qm_traceQUEUE_SEND(void* xQueue);
+    #define traceQUEUE_SEND_FAILED(xQueue) qm_traceQUEUE_SEND_FAILED(xQueue)
+    void qm_traceQUEUE_SEND_FAILED(void* xQueue);
+#endif // DEBUG_QUEUE_MONITOR
+
 #endif /* FREERTOS_CONFIG_H */

@@ -39,9 +39,7 @@
 #include "motors.h"
 #include "log.h"
 #include "pid.h"
-#include "ledseq.h"
 #include "param.h"
-#include "debug.h"
 #include "sitaw.h"
 #ifdef PLATFORM_CF1
   #include "ms5611.h"
@@ -86,6 +84,7 @@ static float pressure;    // pressure from barometer in bar
 static float asl;         // smoothed asl
 static float aslRaw;      // raw asl
 static float aslLong;     // long term asl
+static float aslRef;      // asl reference (ie. offset)
 
 // Altitude hold variables
 static PidObject altHoldPID;  // Used for altitute hold mode. I gets reset when the bat status changes
@@ -176,7 +175,7 @@ void stabilizerInit(void)
   pitchRateDesired = 0;
   yawRateDesired = 0;
 
-  xTaskCreate(stabilizerTask, (const signed char * const)STABILIZER_TASK_NAME,
+  xTaskCreate(stabilizerTask, STABILIZER_TASK_NAME,
               STABILIZER_TASK_STACKSIZE, NULL, STABILIZER_TASK_PRI, NULL);
 
   isInit = true;
@@ -240,6 +239,7 @@ static void stabilizerTask(void* param)
   uint32_t attitudeCounter = 0;
   uint32_t altHoldCounter = 0;
   uint32_t lastWakeTime;
+  float yawRateAngle = 0;
 
   vTaskSetApplicationTaskTag(0, (void*)TASK_STABILIZER_ID_NBR);
 
@@ -259,6 +259,17 @@ static void stabilizerTask(void* param)
     {
       commanderGetRPY(&eulerRollDesired, &eulerPitchDesired, &eulerYawDesired);
       commanderGetRPYType(&rollType, &pitchType, &yawType);
+
+      // Rate-controled YAW is moving YAW angle setpoint
+      if (yawType == RATE) {
+        yawRateAngle -= eulerYawDesired/500.0;
+        while (yawRateAngle > 180.0)
+          yawRateAngle -= 360.0;
+        while (yawRateAngle < -180.0)
+          yawRateAngle += 360.0;
+
+        eulerYawDesired = -yawRateAngle;
+      }
 
       // 250HZ
       if (++attitudeCounter >= ATTITUDE_UPDATE_RATE_DIVIDER)
@@ -298,10 +309,6 @@ static void stabilizerTask(void* param)
       {
         pitchRateDesired = eulerPitchDesired;
       }
-      if (yawType == RATE)
-      {
-        yawRateDesired = -eulerYawDesired;
-      }
 
       // TODO: Investigate possibility to subtract gyro drift.
       controllerCorrectRatePID(gyro.x, -gyro.y, gyro.z,
@@ -339,6 +346,9 @@ static void stabilizerTask(void* param)
       {
         distributePower(0, 0, 0, 0);
         controllerResetAllPID();
+
+        // Reset the calculated YAW angle for rate control
+        yawRateAngle = eulerYawActual;
       }
     }
   }
@@ -405,6 +415,8 @@ static void stabilizerAltHoldUpdate(void)
 #else
   lps25hGetData(&pressure, &temperature, &aslRaw);
 #endif
+
+  aslRaw -= aslRef;
 
   asl = asl * aslAlpha + aslRaw * (1 - aslAlpha);
   aslLong = aslLong * aslAlphaLong + aslRaw * (1 - aslAlphaLong);
@@ -695,6 +707,7 @@ LOG_GROUP_STOP(autoTO)
 PARAM_GROUP_START(altHold)
 PARAM_ADD(PARAM_FLOAT, aslAlpha, &aslAlpha)
 PARAM_ADD(PARAM_FLOAT, aslAlphaLong, &aslAlphaLong)
+PARAM_ADD(PARAM_FLOAT, aslRef, &aslRef)
 PARAM_ADD(PARAM_FLOAT, errDeadband, &errDeadband)
 PARAM_ADD(PARAM_FLOAT, altHoldChangeSens, &altHoldChange_SENS)
 PARAM_ADD(PARAM_FLOAT, altHoldErrMax, &altHoldErrMax)

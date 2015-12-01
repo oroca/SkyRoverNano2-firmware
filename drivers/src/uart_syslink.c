@@ -1,6 +1,6 @@
 /**
- *    ||          ____  _ __                           
- * +------+      / __ )(_) /_______________ _____  ___ 
+ *    ||          ____  _ __
+ * +------+      / __ )(_) /_______________ _____  ___
  * | 0xBC |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
  * +------+    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
  *  ||  ||    /_____/_/\__/\___/_/   \__,_/ /___/\___/
@@ -40,7 +40,7 @@
 #include "cfassert.h"
 #include "nvicconf.h"
 #include "config.h"
-#include "ledseq.h"
+#include "queuemonitor.h"
 
 
 #define UART_DATA_TIMEOUT_MS 1000
@@ -93,7 +93,7 @@ void uartDmaInit(void)
   DMA_InitStructureShare.DMA_Channel = UART_DMA_CH;
 
   NVIC_InitStructure.NVIC_IRQChannel = UART_DMA_IRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_UART_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_LOW_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
@@ -145,16 +145,16 @@ void uartInit(void)
 
   uartDmaInit();
 
-  // TODO: Enable
-  // Configure Tx buffer empty interrupt
+  // Configure Rx buffer not empty interrupt
   NVIC_InitStructure.NVIC_IRQChannel = UART_IRQ;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_UART_PRI;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = NVIC_HIGH_PRI;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 
   vSemaphoreCreateBinary(waitUntilSendDone);
   uartDataDelivery = xQueueCreate(40, sizeof(uint8_t));
+  DEBUG_QUEUE_MONITOR_REGISTER(uartDataDelivery);
 
   USART_ITConfig(UART_TYPE, USART_IT_RXNE, ENABLE);
 
@@ -177,7 +177,7 @@ void uartInit(void)
 
   //Enable UART
   USART_Cmd(UART_TYPE, ENABLE);
-  
+
   isInit = true;
 }
 
@@ -226,7 +226,7 @@ void uartSendDataIsrBlocking(uint32_t size, uint8_t* data)
 int uartPutchar(int ch)
 {
     uartSendData(1, (uint8_t *)&ch);
-    
+
     return (unsigned char)ch;
 }
 
@@ -337,12 +337,10 @@ void uartTxenFlowctrlIsr()
   if (GPIO_ReadInputDataBit(UART_TXEN_PORT, UART_TXEN_PIN) == Bit_SET)
   {
     uartPauseDma();
-    //ledSet(LED_GREEN_R, 1);
   }
   else
   {
     uartResumeDma();
-    //ledSet(LED_GREEN_R, 0);
   }
 }
 
@@ -370,4 +368,3 @@ void __attribute__((used)) DMA2_Stream7_IRQHandler(void)
 {
   uartDmaIsr();
 }
-
