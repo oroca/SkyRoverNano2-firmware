@@ -50,11 +50,12 @@ extern void deckInfoInit();
 
 void deckInit()
 {
-  int nDecks;
-  int i;
-
   deckDriverCount();
   deckInfoInit();
+
+#ifndef IGNORE_OW_DECKS
+  int nDecks;
+  int i;
 
   nDecks = deckCount();
 
@@ -73,14 +74,15 @@ void deckInit()
       deck->driver->init(deck);
     }
   }
+#endif
 
   // Init build-forced driver
   if (strlen(deck_force)>0) {
     const DeckDriver *driver = deckFindDriverByName(deck_force);
     if (!driver) {
-      DEBUG_PRINT("WARNING: compile-time forced driver '%s' not found\n", deck_force);
+      DEBUG_PRINT("WARNING: compile-time forced driver %s not found\n", deck_force);
     } else if (driver->init) {
-      DEBUG_PRINT("Initializing compile-time forced driver '%s'\n", deck_force);
+      DEBUG_PRINT("Initializing compile-time forced driver %s\n", deck_force);
       driver->init(NULL);  // Passing NULL as deck info
     }
   }
@@ -88,9 +90,10 @@ void deckInit()
 
 bool deckTest()
 {
+  bool pass = true;
+#ifndef IGNORE_OW_DECKS
   int nDecks;
   int i;
-  bool pass = true;
 
   nDecks = deckCount();
 
@@ -106,15 +109,16 @@ bool deckTest()
       }
     }
   }
+#endif
 
   // Test build-forced driver
   if (strlen(deck_force)>0) {
     const DeckDriver *driver = deckFindDriverByName(deck_force);
     if (driver && driver->test) {
       if (driver->test()) {
-        DEBUG_PRINT("Compile-time forced driver '%s' test [OK]\n", deck_force);
+        DEBUG_PRINT("Compile-time forced driver %s test [OK]\n", deck_force);
       } else {
-        DEBUG_PRINT("Compile-time forced driver '%s' test [FAIL]\n", deck_force);
+        DEBUG_PRINT("Compile-time forced driver %s test [FAIL]\n", deck_force);
         pass = false;
       }
     }
