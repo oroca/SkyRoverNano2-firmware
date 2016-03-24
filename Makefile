@@ -12,6 +12,7 @@ CFLAGS += $(EXTRA_CFLAGS)
 ######### JTAG and environment configuration ##########
 OPENOCD           ?= openocd
 OPENOCD_INTERFACE ?= interface/stlink-v2.cfg
+OPENOCD_CMDS      ?=
 CROSS_COMPILE     ?= arm-none-eabi-
 PYTHON2           ?= python2
 DFU_UTIL          ?= dfu-util
@@ -44,7 +45,7 @@ endif
 RTOS_DEBUG        ?= 0
 
 ############### Location configuration ################
-FREERTOS = lib/FreeRTOS
+FREERTOS = src/lib/FreeRTOS
 ifeq ($(USE_FPU), 1)
 PORT = $(FREERTOS)/portable/GCC/ARM_CM4F
 else
@@ -60,7 +61,7 @@ LINKER_DIR = tools/make/F405/linker
 ST_OBJ_DIR  = tools/make/F405
 endif
 
-STLIB = lib
+STLIB = src/lib
 
 ################ Build configuration ##################
 # St Lib
@@ -75,7 +76,7 @@ VPATH_CF2 += $(STLIB)/STM32_CPAL_Driver/src
 VPATH_CF2 += $(STLIB)/STM32_USB_Device_Library/Core/src
 VPATH_CF2 += $(STLIB)/STM32_USB_OTG_Driver/src
 VPATH_CF2 += $(STLIB)/STM32_CPAL_Driver/devices/stm32f4xx
-VPATH_CF2 += deck/api deck/core deck/drivers/src
+VPATH_CF2 += src/deck/api src/deck/core src/deck/drivers/src src/deck/drivers/src/test
 CRT0_CF2 = startup_stm32f40xx.o system_stm32f4xx.o
 
 # Should maybe be in separate file?
@@ -89,6 +90,8 @@ ST_OBJ_CF2 += usb_core.o usb_dcd_int.o usb_dcd.o
 # USB Device obj
 ST_OBJ_CF2 += usbd_ioreq.o usbd_req.o usbd_core.o
 
+# libdw dw1000 driver
+VPATH_CF2 += vendor/libdw1000/src
 
 # FreeRTOS
 VPATH += $(PORT)
@@ -100,9 +103,9 @@ VPATH += $(FREERTOS)
 FREERTOS_OBJ = list.o tasks.o queue.o timers.o $(MEMMANG_OBJ)
 
 # Crazyflie sources
-VPATH += init hal/src modules/src utils/src drivers/src
-VPATH_CF1 += platform/cf1
-VPATH_CF2 += platform/cf2
+VPATH += src/init src/hal/src src/modules/src src/utils/src src/drivers/src
+VPATH_CF1 += src/platform/cf1
+VPATH_CF2 += src/platform/cf2
 
 ifeq ($(PLATFORM), CF1)
 VPATH +=$(VPATH_CF1)
@@ -123,9 +126,11 @@ PROJ_OBJ_CF2 += platform_cf2.o
 PROJ_OBJ += exti.o nvic.o motors.o
 PROJ_OBJ_CF1 += led_f103.o i2cdev_f103.o i2croutines.o adc_f103.o mpu6050.o
 PROJ_OBJ_CF1 += hmc5883l.o ms5611.o nrf24l01.o eeprom.o watchdog.o
+PROJ_OBJ_CF1 += eskylink.o
 PROJ_OBJ_CF2 += led_f405.o mpu6500.o i2cdev_f405.o ws2812_cf2.o lps25h.o
 PROJ_OBJ_CF2 += ak8963.o eeprom.o maxsonar.o piezo.o
 PROJ_OBJ_CF2 += uart_syslink.o swd.o uart1.o uart2.o watchdog.o
+PROJ_OBJ_CF2 += cppm.o
 # USB Files
 PROJ_OBJ_CF2 += usb_bsp.o usblink.o usbd_desc.o usb.o
 
@@ -134,30 +139,39 @@ PROJ_OBJ += crtp.o ledseq.o freeRTOSdebug.o buzzer.o
 PROJ_OBJ_CF1 += imu_cf1.o pm_f103.o nrf24link.o ow_none.o uart.o
 PROJ_OBJ_CF2 += imu_cf2.o pm_f405.o syslink.o radiolink.o ow_syslink.o proximity.o
 
+# libdw
+PROJ_OBJ_CF2 += libdw1000.o libdw1000Spi.o
+
 # Modules
 PROJ_OBJ += system.o comm.o console.o pid.o crtpservice.o param.o mem.o
-PROJ_OBJ += commander.o controller.o sensfusion6.o stabilizer.o
+PROJ_OBJ += commander.o attitude_pid_controller.o sensfusion6.o stabilizer.o position_estimator_altitude.o position_controller_altitude.o altitude_hold.o
 PROJ_OBJ += log.o worker.o trigger.o sitaw.o queuemonitor.o
 PROJ_OBJ_CF1 += sound_cf1.o
-PROJ_OBJ_CF2 += platformservice.o sound_cf2.o
+PROJ_OBJ_CF2 += platformservice.o sound_cf2.o extrx.o
 
 # Deck Core
-PROJ_OBJ_CF2 += deck.o deck_info.o deck_drivers.o
+PROJ_OBJ_CF2 += deck.o deck_info.o deck_drivers.o deck_test.o
 
 # Deck API
 PROJ_OBJ_CF2 += deck_constants.o
 PROJ_OBJ_CF2 += deck_digital.o
 PROJ_OBJ_CF2 += deck_analog.o
+PROJ_OBJ_CF2 += deck_spi.o
 
 # Decks
 PROJ_OBJ_CF2 += bigquad.o
-PROJ_OBJ_CF2 += exptest.o
 PROJ_OBJ_CF2 += ledring12.o
 PROJ_OBJ_CF2 += buzzdeck.o
 PROJ_OBJ_CF2 += gtgps.o
+PROJ_OBJ_CF2 += dwm1000.o
+PROJ_OBJ_CF2 += cppmdeck.o
+#Deck tests
+PROJ_OBJ_CF2 += exptest.o
+#PROJ_OBJ_CF2 += bigquadtest.o
+
 
 # Utilities
-PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o fp16.o debug.o
+PROJ_OBJ += filter.o cpuid.o cfassert.o  eprintf.o crc.o num.o debug.o
 PROJ_OBJ += version.o FreeRTOS-openocd.o
 PROJ_OBJ_CF1 += configblockflash.o
 PROJ_OBJ_CF2 += configblockeeprom.o
@@ -181,9 +195,9 @@ LD = $(CROSS_COMPILE)gcc
 SIZE = $(CROSS_COMPILE)size
 OBJCOPY = $(CROSS_COMPILE)objcopy
 
-INCLUDES  = -I$(FREERTOS)/include -I$(PORT) -I.
-INCLUDES += -Iconfig -Ihal/interface -Imodules/interface
-INCLUDES += -Iutils/interface -Idrivers/interface -Iplatform
+INCLUDES  = -I$(FREERTOS)/include -I$(PORT) -Isrc
+INCLUDES += -Isrc/config -Isrc/hal/interface -Isrc/modules/interface
+INCLUDES += -Isrc/utils/interface -Isrc/drivers/interface -Isrc/platform
 INCLUDES += -I$(STLIB)/CMSIS/Include
 
 INCLUDES_CF1 += -I$(STLIB)/STM32F10x_StdPeriph_Driver/inc
@@ -197,7 +211,8 @@ INCLUDES_CF2 += -I$(STLIB)/STM32_CPAL_Driver/inc
 INCLUDES_CF2 += -I$(STLIB)/STM32_CPAL_Driver/devices/stm32f4xx
 INCLUDES_CF2 += -I$(STLIB)/STM32_USB_Device_Library/Core/inc
 INCLUDES_CF2 += -I$(STLIB)/STM32_USB_OTG_Driver/inc
-INCLUDES_CF2 += -Ideck/interface -I deck/drivers/interface
+INCLUDES_CF2 += -Isrc/deck/interface -Isrc/deck/drivers/interface
+INCLUDES_CF2 += -Ivendor/libdw1000/inc
 
 ifeq ($(USE_FPU), 1)
 	PROCESSOR = -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
@@ -284,7 +299,7 @@ endif
 #################### Targets ###############################
 
 
-all: build
+all: check_submodules build
 build: clean_version compile print_version size
 compile: clean_version $(PROG).hex $(PROG).bin $(PROG).dfu
 
@@ -320,7 +335,7 @@ endif
 
 #Flash the stm.
 flash:
-	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -c "reset halt" \
+	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) $(OPENOCD_CMDS) -f $(OPENOCD_TARGET) -c init -c targets -c "reset halt" \
                  -c "flash write_image erase $(PROG).elf" -c "verify_image $(PROG).elf" -c "reset run" -c shutdown
 
 flash_dfu:
@@ -328,20 +343,23 @@ flash_dfu:
 
 #STM utility targets
 halt:
-	$(OPENOCD) -d0 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -c "halt" -c shutdown
+	$(OPENOCD) -d0 -f $(OPENOCD_INTERFACE) $(OPENOCD_CMDS) -f $(OPENOCD_TARGET) -c init -c targets -c "halt" -c shutdown
 
 reset:
-	$(OPENOCD) -d0 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -c "reset" -c shutdown
+	$(OPENOCD) -d0 -f $(OPENOCD_INTERFACE) $(OPENOCD_CMDS) -f $(OPENOCD_TARGET) -c init -c targets -c "reset" -c shutdown
 
 openocd:
-	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -c "\$$_TARGETNAME configure -rtos auto"
+	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) $(OPENOCD_CMDS) -f $(OPENOCD_TARGET) -c init -c targets -c "\$$_TARGETNAME configure -rtos auto"
 
 trace:
-	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) -f $(OPENOCD_TARGET) -c init -c targets -f tools/trace/enable_trace.cfg
+	$(OPENOCD) -d2 -f $(OPENOCD_INTERFACE) $(OPENOCD_CMDS) -f $(OPENOCD_TARGET) -c init -c targets -f tools/trace/enable_trace.cfg
 
 #Print preprocessor #defines
 prep:
-	@$(CC) -dD
+	@$(CC) $(CFLAGS) -dM -E - < /dev/null
+
+check_submodules:
+	@$(PYTHON2) tools/make/check-for-submodules.py
 
 include tools/make/targets.mk
 
